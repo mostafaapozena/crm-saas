@@ -1,0 +1,10 @@
+const express = require('express');
+const router = express.Router();
+const { createPayroll, getPayroll, updatePayroll } = require('../controllers/payroll');
+const { authenticate } = require('../middleware/auth');
+const { requireFinance } = require('../middleware/finance');
+router.use(authenticate, requireFinance);
+router.get('/', getPayroll);
+router.post('/', createPayroll);
+router.put('/:id', updatePayroll);
+module.exports = router;

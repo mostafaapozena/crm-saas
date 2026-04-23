@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: crm_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: crm_saas
+      MYSQL_USER: crmuser
+      MYSQL_PASSWORD: crmpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - crm_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: crm_backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://crmuser:crmpassword@mysql:3306/crm_saas
+      JWT_SECRET: super-secret-jwt-key-change-in-production-32chars
+      JWT_EXPIRES_IN: 7d
+      PORT: 5000
+      FRONTEND_URL: http://localhost:3000
+      NODE_ENV: production
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build: ./frontend
+    container_name: crm_frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000
+      NEXT_PUBLIC_SOCKET_URL: http://localhost:5000
+    ports:
+      - "3000:3000"
+
+volumes:
+  crm_mysql_data:

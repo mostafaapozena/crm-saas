@@ -1,0 +1,647 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════
+// CORE: USERS & AUTH
+// ═══════════════════════════════════════
+
+model User {
+  id              Int        @id @default(autoincrement())
+  name            String
+  email           String     @unique
+  password        String
+  role            Role       @default(SALES_EXECUTIVE)
+  department      String?
+  status          UserStatus @default(ACTIVE)
+  organization_id Int?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // CRM
+  leads             Lead[]
+  // Phase 2
+  tasksAssigned     Task[]          @relation("TaskAssignee")
+  tasksCreated      Task[]          @relation("TaskCreator")
+  // Finance
+  invoicesCreated   Invoice[]       @relation("InvoiceCreator")
+  expensesCreated   Expense[]       @relation("ExpenseCreator")
+  payrollEntries    Payroll[]
+  // New
+  projectsCreated   Project[]       @relation("ProjectCreator")
+  campaignsCreated  Campaign[]      @relation("CampaignCreator")
+  vendorsCreated    Vendor[]        @relation("VendorCreator")
+  rfqsCreated       RFQ[]           @relation("RFQCreator")
+  purchaseOrders    PurchaseOrder[] @relation("POCreator")
+  notifications     Notification[]
+  activityLogs      ActivityLog[]   @relation("ActivityUser")
+  milestonesCreated Milestone[]     @relation("MilestoneCreator")
+
+  @@map("users")
+}
+
+// ═══════════════════════════════════════
+// PHASE 1: CRM
+// ═══════════════════════════════════════
+
+model Lead {
+  id              Int       @id @default(autoincrement())
+  name            String
+  phone           String?
+  email           String?
+  source          String?
+  stage           LeadStage @default(LEAD)
+  deal_value      Decimal?  @db.Decimal(15, 2)
+  probability     Int?      @default(0)
+  created_by      Int
+  organization_id Int?
+  campaign_id     Int?
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  creator      User          @relation(fields: [created_by], references: [id])
+  campaign     Campaign?     @relation(fields: [campaign_id], references: [id])
+  deals        Deal[]
+  activityLogs ActivityLog[]
+
+  @@map("leads")
+}
+
+model Client {
+  id              Int      @id @default(autoincrement())
+  name            String
+  company         String?
+  phone           String?
+  email           String?
+  organization_id Int?
+  address         String?
+  website         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  deals        Deal[]
+  projects     Project[]
+  invoices     Invoice[]
+  campaigns    Campaign[]    @relation("ClientCampaigns")
+  activityLogs ActivityLog[]
+
+  @@map("clients")
+}
+
+model Deal {
+  id                  Int        @id @default(autoincrement())
+  lead_id             Int?
+  client_id           Int?
+  value               Decimal?   @db.Decimal(15, 2)
+  status              DealStatus @default(ACTIVE)
+  expected_close_date DateTime?
+  organization_id     Int?
+  notes               String?    @db.Text
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  lead         Lead?         @relation(fields: [lead_id], references: [id])
+  client       Client?       @relation(fields: [client_id], references: [id])
+  projects     Project[]
+  invoices     Invoice[]
+  activityLogs ActivityLog[]
+
+  @@map("deals")
+}
+
+// ═══════════════════════════════════════
+// PHASE 2: OPERATIONS
+// ═══════════════════════════════════════
+
+model Project {
+  id                  Int           @id @default(autoincrement())
+  title               String
+  description         String?       @db.Text
+  client_id           Int?
+  deal_id             Int?
+  type                ProjectType   @default(ICT)
+  status              ProjectStatus @default(PLANNING)
+  budget              Decimal?      @db.Decimal(15, 2)
+  progress_percentage Int           @default(0)
+  start_date          DateTime?
+  end_date            DateTime?
+  organization_id     Int?
+  created_by          Int?
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  client       Client?       @relation(fields: [client_id], references: [id])
+  deal         Deal?         @relation(fields: [deal_id], references: [id])
+
+  creator     User?         @relation("ProjectCreator", fields: [created_by], references: [id])
+
+  tasks        Task[]
+  milestones   Milestone[]
+  invoices     Invoice[]
+  expenses     Expense[]
+  campaigns    Campaign[]    @relation("ProjectCampaigns")
+  activityLogs ActivityLog[]
+
+  @@map("projects")
+}
+
+model Task {
+  id              Int          @id @default(autoincrement())
+  title           String
+  description     String?      @db.Text
+  project_id      Int
+  assigned_to     Int?
+  created_by      Int
+  status          TaskStatus   @default(TODO)
+  priority        TaskPriority @default(MEDIUM)
+  due_date        DateTime?
+  organization_id Int?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  project      Project       @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  assignee     User?         @relation("TaskAssignee", fields: [assigned_to], references: [id])
+  creator      User          @relation("TaskCreator", fields: [created_by], references: [id])
+  activityLogs ActivityLog[]
+
+  @@map("tasks")
+}
+
+model Milestone {
+  id              Int             @id @default(autoincrement())
+  title           String
+  description     String?         @db.Text
+  project_id      Int
+  status          MilestoneStatus @default(PENDING)
+  due_date        DateTime?
+  completed_date  DateTime?
+  created_by      Int
+  organization_id Int?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  creator User    @relation("MilestoneCreator", fields: [created_by], references: [id])
+
+  @@map("milestones")
+}
+
+// ═══════════════════════════════════════
+// PHASE 3: FINANCE
+// ═══════════════════════════════════════
+
+model Invoice {
+  id              Int           @id @default(autoincrement())
+  client_id       Int
+  project_id      Int?
+  deal_id         Int?
+  invoice_number  String        @unique
+  amount          Decimal       @db.Decimal(15, 2)
+  tax             Decimal       @default(0) @db.Decimal(5, 2)
+  total_amount    Decimal       @db.Decimal(15, 2)
+  status          InvoiceStatus @default(DRAFT)
+  issued_date     DateTime      @default(now())
+  due_date        DateTime?
+  notes           String?       @db.Text
+  created_by      Int
+  organization_id Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  client   Client    @relation(fields: [client_id], references: [id])
+  project  Project?  @relation(fields: [project_id], references: [id])
+  deal     Deal?     @relation(fields: [deal_id], references: [id])
+  creator  User      @relation("InvoiceCreator", fields: [created_by], references: [id])
+  payments Payment[]
+
+  @@map("invoices")
+}
+
+model Payment {
+  id               Int           @id @default(autoincrement())
+  invoice_id       Int
+  amount_paid      Decimal       @db.Decimal(15, 2)
+  payment_method   PaymentMethod @default(BANK_TRANSFER)
+  payment_date     DateTime      @default(now())
+  reference_number String?
+  notes            String?
+  organization_id  Int?
+  createdAt        DateTime      @default(now())
+
+  invoice Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model Expense {
+  id              Int             @id @default(autoincrement())
+  title           String
+  category        ExpenseCategory @default(OTHER)
+  amount          Decimal         @db.Decimal(15, 2)
+  project_id      Int?
+  vendor_id       Int?
+  created_by      Int
+  date            DateTime        @default(now())
+  notes           String?
+  organization_id Int?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  project Project? @relation(fields: [project_id], references: [id])
+  vendor  Vendor?  @relation(fields: [vendor_id], references: [id])
+  creator User     @relation("ExpenseCreator", fields: [created_by], references: [id])
+
+  @@map("expenses")
+}
+
+model Payroll {
+  id              Int           @id @default(autoincrement())
+  user_id         Int
+  period          String
+  basic_salary    Decimal       @db.Decimal(15, 2)
+  bonuses         Decimal       @default(0) @db.Decimal(15, 2)
+  deductions      Decimal       @default(0) @db.Decimal(15, 2)
+  net_salary      Decimal       @db.Decimal(15, 2)
+  status          PayrollStatus @default(PENDING)
+  paid_date       DateTime?
+  organization_id Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  employee User @relation(fields: [user_id], references: [id])
+
+  @@map("payroll")
+}
+
+// ═══════════════════════════════════════
+// MARKETING MODULE (NEW)
+// ═══════════════════════════════════════
+
+model Campaign {
+  id              Int            @id @default(autoincrement())
+  title           String
+  description     String?        @db.Text
+  type            CampaignType   @default(DIGITAL)
+  platform        AdPlatform     @default(ALL)
+  status          CampaignStatus @default(DRAFT)
+  budget          Decimal?       @db.Decimal(15, 2)
+  daily_budget    Decimal?       @db.Decimal(15, 2)
+  spent           Decimal        @default(0) @db.Decimal(15, 2)
+  start_date      DateTime?
+  end_date        DateTime?
+  external_id     String?
+  client_id       Int?
+  project_id      Int?
+  created_by      Int
+  organization_id Int?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  creator   User             @relation("CampaignCreator", fields: [created_by], references: [id])
+  client    Client?          @relation("ClientCampaigns", fields: [client_id], references: [id])
+  project   Project?         @relation("ProjectCampaigns", fields: [project_id], references: [id])
+  leads     Lead[]
+  metrics   CampaignMetric[]
+  creatives Creative[]
+
+  @@map("campaigns")
+}
+
+model CampaignMetric {
+  id              Int      @id @default(autoincrement())
+  campaign_id     Int
+  date            DateTime @default(now())
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  conversions     Int      @default(0)
+  spend           Decimal  @default(0) @db.Decimal(15, 2)
+  revenue         Decimal  @default(0) @db.Decimal(15, 2)
+  organization_id Int?
+  createdAt       DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+
+  @@map("campaign_metrics")
+}
+
+model Creative {
+  id          Int          @id @default(autoincrement())
+  campaign_id Int
+  file_url    String       @db.Text
+  type        CreativeType @default(IMAGE)
+  ad_copy     String?      @db.Text
+  created_at  DateTime     @default(now())
+
+  campaign Campaign @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+
+  @@map("creatives")
+}
+
+// ═══════════════════════════════════════
+// PROCUREMENT MODULE (NEW)
+// ═══════════════════════════════════════
+
+model Vendor {
+  id              Int          @id @default(autoincrement())
+  name            String
+  contact_name    String?
+  email           String?
+  phone           String?
+  address         String?
+  category        String?
+  rating          Int?         @default(0)
+  status          VendorStatus @default(ACTIVE)
+  created_by      Int
+  organization_id Int?
+  notes           String?      @db.Text
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  creator  User      @relation("VendorCreator", fields: [created_by], references: [id])
+  rfqs     RFQ[]
+  expenses Expense[]
+
+  @@map("vendors")
+}
+
+model RFQ {
+  id              Int       @id @default(autoincrement())
+  title           String
+  description     String?   @db.Text
+  vendor_id       Int
+  project_id      Int?
+  status          RFQStatus @default(DRAFT)
+  deadline        DateTime?
+  created_by      Int
+  organization_id Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  vendor     Vendor      @relation(fields: [vendor_id], references: [id])
+  creator    User        @relation("RFQCreator", fields: [created_by], references: [id])
+  quotations Quotation[]
+
+  @@map("rfqs")
+}
+
+model Quotation {
+  id              Int             @id @default(autoincrement())
+  rfq_id          Int
+  amount          Decimal         @db.Decimal(15, 2)
+  validity_days   Int             @default(30)
+  status          QuotationStatus @default(PENDING)
+  notes           String?         @db.Text
+  organization_id Int?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  rfq           RFQ            @relation(fields: [rfq_id], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder?
+
+  @@map("quotations")
+}
+
+model PurchaseOrder {
+  id              Int       @id @default(autoincrement())
+  quotation_id    Int       @unique
+  po_number       String    @unique
+  amount          Decimal   @db.Decimal(15, 2)
+  status          POStatus  @default(PENDING)
+  delivery_date   DateTime?
+  created_by      Int
+  organization_id Int?
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  quotation Quotation @relation(fields: [quotation_id], references: [id])
+  creator   User      @relation("POCreator", fields: [created_by], references: [id])
+
+  @@map("purchase_orders")
+}
+
+// ═══════════════════════════════════════
+// SYSTEM: NOTIFICATIONS & ACTIVITY
+// ═══════════════════════════════════════
+
+model Notification {
+  id              Int              @id @default(autoincrement())
+  user_id         Int
+  type            NotificationType @default(INFO)
+  title           String
+  message         String           @db.Text
+  link            String?
+  read            Boolean          @default(false)
+  organization_id Int?
+  createdAt       DateTime         @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id              Int      @id @default(autoincrement())
+  user_id         Int
+  action          String
+  module          String
+  entity_id       Int?
+  entity_type     String?
+  description     String   @db.Text
+  metadata        Json?
+  organization_id Int?
+  lead_id         Int?
+  deal_id         Int?
+  client_id       Int?
+  project_id      Int?
+  task_id         Int?
+  createdAt       DateTime @default(now())
+
+  user    User     @relation("ActivityUser", fields: [user_id], references: [id])
+  lead    Lead?    @relation(fields: [lead_id], references: [id])
+  deal    Deal?    @relation(fields: [deal_id], references: [id])
+  client  Client?  @relation(fields: [client_id], references: [id])
+  project Project? @relation(fields: [project_id], references: [id])
+  task    Task?    @relation(fields: [task_id], references: [id])
+
+  @@map("activity_logs")
+}
+
+// ═══════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════
+
+enum Role {
+  SUPER_ADMIN
+  FOUNDER_CEO
+  SALES_MANAGER
+  SALES_EXECUTIVE
+  MARKETING_MANAGER
+  MEDIA_BUYER
+  DESIGNER
+  PROJECT_MANAGER
+  ENGINEER
+  FINANCE_MANAGER
+  ACCOUNTANT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LeadStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum DealStatus {
+  ACTIVE
+  WON
+  LOST
+  ON_HOLD
+}
+
+enum ProjectType {
+  MARKETING_CAMPAIGN
+  ICT
+  HYBRID
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  REVIEW
+  COMPLETED
+  ON_HOLD
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CREDIT_CARD
+  CASH
+  CHEQUE
+  CRYPTO
+  OTHER
+}
+
+enum ExpenseCategory {
+  ADS
+  VENDOR
+  SALARY
+  TOOLS
+  TRAVEL
+  UTILITIES
+  OTHER
+}
+
+enum PayrollStatus {
+  PENDING
+  PROCESSED
+  PAID
+}
+
+enum CampaignType {
+  DIGITAL
+  SOCIAL
+  EMAIL
+  SMS
+  EVENT
+  PRINT
+  OTHER
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+}
+
+enum RFQStatus {
+  DRAFT
+  SENT
+  RECEIVED
+  CLOSED
+}
+
+enum QuotationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum POStatus {
+  PENDING
+  APPROVED
+  DELIVERED
+  CANCELLED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  TASK
+  DEAL
+  PAYMENT
+}
+
+enum AdPlatform {
+  META
+  GOOGLE
+  ALL
+}
+
+enum CreativeType {
+  IMAGE
+  VIDEO
+}

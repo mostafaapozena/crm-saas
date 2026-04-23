@@ -1,0 +1,17 @@
+const express = require('express');
+const router = express.Router();
+const p = require('../controllers/procurement');
+const { authenticate } = require('../middleware/auth');
+router.use(authenticate);
+router.get('/vendors', p.getVendors);
+router.post('/vendors', p.createVendor);
+router.put('/vendors/:id', p.updateVendor);
+router.delete('/vendors/:id', p.deleteVendor);
+router.get('/rfqs', p.getRFQs);
+router.post('/rfqs', p.createRFQ);
+router.put('/rfqs/:id', p.updateRFQ);
+router.post('/quotations', p.createQuotation);
+router.post('/quotations/:id/approve', p.approveQuotation);
+router.get('/orders', p.getPurchaseOrders);
+router.put('/orders/:id', p.updatePurchaseOrder);
+module.exports = router;

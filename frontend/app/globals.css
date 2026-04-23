@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Arabic font (Alexandria) — loaded once, applied conditionally ── */
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800;900&display=swap');
+
+/* Apply Alexandria only when Arabic locale is active */
+.font-arabic,
+.font-arabic * {
+  font-family: 'Alexandria', 'Segoe UI', Tahoma, Geneva, sans-serif !important;
+}
+
+/* RTL icon flip helper — apply to directional icons (arrows, chevrons) */
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* ── Dark theme values in :root (SSR-safe fallback) ─── */
+:root {
+  --brand-blue: #004AFF;
+  --brand-green: #C9FC0D;
+  /* Dark mode is the application default — always defined in :root */
+  --bg: #0D0E1A;
+  --surface: #1A2035;
+  --surface-2: #111827;
+  --border: #334155;
+  --sidebar-border: #1e2640;
+  --text: #ffffff;
+  --text-secondary: #64748b;
+  --text-muted: #334155;
+  --muted: #94A3B8;
+}
+
+/* ── Dark theme (explicit) ───────────────────────────── */
+[data-theme="dark"] {
+  --bg: #0D0E1A;
+  --surface: #1A2035;
+  --surface-2: #111827;
+  --border: #334155;
+  --sidebar-border: #1e2640;
+  --text: #ffffff;
+  --text-secondary: #64748b;
+  --text-muted: #334155;
+  --muted: #94A3B8;
+}
+
+/* ── Light theme ─────────────────────────────────────── */
+[data-theme="light"] {
+  --bg: #F8FAFC;
+  --surface: #ffffff;
+  --surface-2: #F9FAFB;
+  --border: #E5E7EB;
+  --sidebar-border: #E5E7EB;
+  --text: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6B7280;
+  --muted: #6B7280;
+  /* Softer, more accessible primary for light backgrounds */
+  --brand-blue: #2563EB;
+}
+
+/* ── Base styles — !important ensures no Tailwind/inline override wins ── */
+html, body {
+  background: var(--bg, #0D0E1A) !important;
+  color: var(--text, #ffffff) !important;
+  min-height: 100vh;
+}
+
+/* ── Theme transitions (suppressed during initial load via .no-transition) */
+html:not(.no-transition) *,
+html:not(.no-transition) *::before,
+html:not(.no-transition) *::after {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* ── Light-mode overrides for hardcoded dark-mode Tailwind classes ────── *
+ * All page content uses text-white / text-slate-3xx / bg-slate-8xx which  *
+ * are invisible on a light background. These overrides make them readable. */
+
+/* Text — high-contrast hierarchy */
+[data-theme="light"] .text-white       { color: #111827 !important; }
+[data-theme="light"] .text-slate-300   { color: #374151 !important; }
+[data-theme="light"] .text-slate-400   { color: #4B5563 !important; }
+[data-theme="light"] .text-slate-500   { color: #6B7280 !important; }
+[data-theme="light"] .text-slate-600   { color: #374151 !important; }
+
+/* Surfaces — neutral light backgrounds for badges, ghost buttons, etc. */
+[data-theme="light"] .bg-slate-500,
+[data-theme="light"] .bg-slate-600,
+[data-theme="light"] .bg-slate-700,
+[data-theme="light"] .bg-slate-800     { background-color: #F3F4F6 !important; }
+[data-theme="light"] .bg-slate-500\/20 { background-color: rgba(243,244,246,0.4) !important; }
+[data-theme="light"] .bg-slate-800\/20 { background-color: rgba(243,244,246,0.3) !important; }
+[data-theme="light"] .bg-slate-800\/30 { background-color: rgba(243,244,246,0.5) !important; }
+[data-theme="light"] .bg-slate-800\/40 { background-color: rgba(243,244,246,0.6) !important; }
+[data-theme="light"] .bg-slate-800\/50 { background-color: rgba(243,244,246,0.8) !important; }
+
+/* Borders */
+[data-theme="light"] .border-slate-600,
+[data-theme="light"] .border-slate-700,
+[data-theme="light"] .border-slate-800 { border-color: #E5E7EB !important; }
+[data-theme="light"] .border-slate-800\/60 { border-color: rgba(229,231,235,0.8) !important; }
+
+/* Named-hex card backgrounds — white surface with subtle elevation */
+[data-theme="light"] .bg-\[\#1a2035\],
+[data-theme="light"] .bg-\[\#111827\],
+[data-theme="light"] .bg-\[\#0a0e1a\],
+[data-theme="light"] .bg-\[\#0d1424\]  {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Dividers */
+[data-theme="light"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(229, 231, 235, 0.8) !important;
+}
+
+/* ── Light-mode structural improvements ─────────────────────────────────── */
+
+/* Sidebar: pure white separates it visually from the #F8FAFC main area */
+[data-theme="light"] aside {
+  background: #ffffff !important;
+  box-shadow: 1px 0 0 #E5E7EB;
+}
+
+/* Sidebar nav links: subtle hover tint */
+[data-theme="light"] nav a.transition-all:hover {
+  background-color: rgba(37, 99, 235, 0.06);
+}
+
+/* Ghost button hover in light mode */
+[data-theme="light"] .hover\:bg-slate-700:hover {
+  background-color: #E5E7EB !important;
+}
+
+/* hover:text-white → legible in light mode */
+[data-theme="light"] .hover\:text-white:hover {
+  color: #111827 !important;
+}
+
+/* Primary gradient buttons keep white text in light mode */
+[data-theme="light"] .from-sky-500.text-white,
+[data-theme="light"] .from-sky-400.text-white {
+  color: #ffffff !important;
+}
+
+/* ── RTL sidebar active border fix ──────────────────────────────────────── */
+/* The active border is applied inline (JS), so RTL is handled in Sidebar.js.
+   This rule covers any remaining CSS-generated left borders in RTL context. */
+[dir="rtl"] nav a[style*="borderLeft"] {
+  border-left: none !important;
+  border-right: 2px solid var(--brand-blue) !important;
+}
+
+/* ── Light-mode: inputs, selects, textareas ─────────────────────────────── */
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  color-scheme: light;
+}
+
+/* Ensure product cards in POS use theme surface in light mode */
+[data-theme="light"] button[style*="background: 'var(--surface)'"],
+[data-theme="light"] button[style*="background: var(--surface)"] {
+  background: #ffffff !important;
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: var(--brand-blue); }
+}
+
+/* Global Navigation and Custom Scrollbar UI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-blue);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}

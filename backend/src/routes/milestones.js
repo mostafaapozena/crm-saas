@@ -1,0 +1,10 @@
+const express = require('express');
+const router = express.Router();
+const { createMilestone, getMilestones, updateMilestone, deleteMilestone } = require('../controllers/milestones');
+const { authenticate } = require('../middleware/auth');
+router.use(authenticate);
+router.get('/', getMilestones);
+router.post('/', createMilestone);
+router.put('/:id', updateMilestone);
+router.delete('/:id', deleteMilestone);
+module.exports = router;
