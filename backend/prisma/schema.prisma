@@ -795,4 +795,7 @@ model MarketingAccount {
   @@unique([user_id, platform, account_id])
   @@map("marketing_accounts")
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4d2f059 (initial project upload)

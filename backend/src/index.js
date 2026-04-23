@@ -7,6 +7,7 @@ const { Server } = require('socket.io');
 const AutomationEngine = require('./lib/automation');
 const { startSyncScheduler } = require('./lib/sync');
 
+<<<<<<< HEAD
 // ── Phase 1 ──────────────────────────────────────────────────────────────────
 const authRoutes       = require('./routes/auth');
 const leadRoutes       = require('./routes/leads');
@@ -57,6 +58,17 @@ const httpServer = createServer(app);
 const ALLOWED_ORIGINS = process.env.FRONTEND_URL
   ? [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:3001']
   : ['http://localhost:3000', 'http://localhost:3001'];
+=======
+// Central API router will manage all routes under /api
+const apiRouter = require('./apiRouter');
+// Lightweight imports kept only for health and internal wiring
+const logger = require('./middleware/logger');
+
+const app        = express();
+const httpServer = createServer(app);
+// Production CORS: only allow the production frontend domain
+const ALLOWED_ORIGINS = ['https://caitrus.net'];
+>>>>>>> 4d2f059 (initial project upload)
 
 const corsOptions = {
   origin: (origin, cb) => (!origin || ALLOWED_ORIGINS.includes(origin) ? cb(null, true) : cb(new Error('CORS blocked'))),
@@ -75,11 +87,19 @@ app.set('automation', automation);
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+<<<<<<< HEAD
 app.use(logger);
+=======
+
+app.use(logger);
+// Mount centralized API router under /api
+app.use('/api', apiRouter);
+>>>>>>> 4d2f059 (initial project upload)
 
 // Serve uploaded creatives statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+<<<<<<< HEAD
 app.get('/health', (req, res) => res.json({ status: 'ok', system: 'CAI2RUS Business OS', modules: 22, phase: '6' }));
 
 // ── Routes ───────────────────────────────────────────────────────────────────
@@ -121,6 +141,11 @@ app.use('/marketing-accounts', marketingAccountsRoutes);
 // ── Dashboard endpoints ───────────────────────────────────────────────────────
 app.get('/dashboard/projects-summary', authenticate, getProjectsSummary);
 app.get('/dashboard/ceo',              authenticate, getCEODashboard);
+=======
+// Removed root health endpoint; health is exposed via /api/health
+
+// All routing now goes through the centralized apiRouter mounted at /api
+>>>>>>> 4d2f059 (initial project upload)
 
 // ── Socket.io ────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
@@ -134,8 +159,17 @@ io.on('connection', (socket) => {
 
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
 app.use((err, req, res, next) => {
+<<<<<<< HEAD
   console.error(err.stack);
   res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+=======
+  // Do not leak stack traces in production
+  const status = err.status || 500;
+  const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : (err.message || 'Internal server error');
+  // Basic sanitize: avoid exposing sensitive fields
+  console.error({ error: 'RequestFailed', status, message });
+  res.status(status).json({ error: message });
+>>>>>>> 4d2f059 (initial project upload)
 });
 
 const PORT = process.env.PORT || 5000;
